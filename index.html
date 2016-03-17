@@ -1,0 +1,362 @@
+<html>
+
+<head>
+    <title>Home Mortgage Calculator of North Carolina</title>
+    <script language="javascript">
+        function ValidInteger(inStr) {
+            if (inStr == ",")
+                return false
+
+            var len = inStr.length
+            var i
+            for (i = 0; i < len; i++) {
+                if (inStr.charAt(i) != "1" &&
+                    inStr.charAt(i) != "2" &&
+                    inStr.charAt(i) != "3" &&
+                    inStr.charAt(i) != "4" &&
+                    inStr.charAt(i) != "5" &&
+                    inStr.charAt(i) != "6" &&
+                    inStr.charAt(i) != "7" &&
+                    inStr.charAt(i) != "8" &&
+                    inStr.charAt(i) != "9" &&
+                    inStr.charAt(i) != "0" &&
+                    inStr.charAt(i) != ",")
+                    return false;
+            }
+            return true;
+        }
+
+        function selectFactorA(ratio) {
+            if (ratio <= .85) {
+                return (.0032);
+            }
+            if (ratio <= .90 && ratio > .85) {
+                return (.0052);
+            }
+            if (ratio <= .95 && ratio > .90) {
+                return (.0078);
+            }
+            if (ratio <= .97 && ratio > .95) {
+                return (.0092);
+            }
+            if (ratio > .97) {
+                return (.0104);
+            }
+        }
+
+        function selectFactorB(ratio) {
+            if (ratio <= .85) {
+                return (.0021);
+            }
+            if (ratio <= .90 && ratio > .85) {
+                return (.0041);
+            }
+            if (ratio <= .95 && ratio > .90) {
+                return (.0067);
+            }
+            if (ratio <= .97 && ratio > .95) {
+                return (.0083);
+            }
+            if (ratio > .97) {
+                return (.0093);
+            }
+        }
+
+        function formatResult(obj2BFormated) {
+            obj2BFormated.value = obj2BFormated.value * 100;
+            var temp = Math.round(obj2BFormated.value);
+            obj2BFormated.value = temp / 100;
+            temp = obj2BFormated.value.substring((obj2BFormated.value.indexOf(".") + 1), obj2BFormated.value.length);
+            if (temp.length == 1) {
+                obj2BFormated.value = obj2BFormated.value + "0";
+            }
+            if (temp.length == 0) {
+                obj2BFormated.value = obj2BFormated.value + ".00";
+            }
+            if (temp.length == obj2BFormated.value.length) {
+                obj2BFormated.value = obj2BFormated.value + ".00";
+            }
+        }
+
+        function convertMonths(i) {
+            switch (i) {
+                case 0:
+                    return (480);
+                    break;
+                case 1:
+                    return (360);
+                    break;
+                case 2:
+                    return (300);
+                    break;
+                case 3:
+                    return (240);
+                    break;
+                case 4:
+                    return (180);
+                    break;
+                case 5:
+                    return (120);
+                    break;
+            }
+        }
+        
+        function convertTaxes(i) {
+            switch (i) {
+                case 0:
+                    return (0.6040);
+                    break;
+                case 1:
+                    return (0.5661);
+                    break;
+                case 2:
+                    return (0.5136);
+                    break;
+                case 3:
+                    return (0.5200);
+                    break;
+                case 4:
+                    return (0.5500);
+                    break;
+            }
+        }
+
+        function PMT(ir, np, pv) {
+            var q;
+            q = Math.pow(1 + ir, np);
+            return ((ir * (0 + q * pv)) / (-1 + q));
+        }
+
+        function estimatePMI() {
+            //check for empty values------------------------------------------------
+            if (document.calc.LoanAmount.value == "") {
+                alert("Please enter the amount of your loan.");
+                document.calc.LoanAmount.focus();
+                return;
+            }
+            if (!ValidInteger(document.calc.LoanAmount.value)) {
+                alert("Please enter a numeric value for the amount of your loan.");
+                document.calc.LoanAmount.focus();
+                return;
+            }
+            if (document.calc.SalesPrice.value == "") {
+                alert("Please enter the sales price of your home.");
+                document.calc.SalesPrice.focus();
+                return;
+            }
+            if (!ValidInteger(document.calc.SalesPrice.value)) {
+                alert("Please enter a numeric value for sales price of your home.");
+                document.calc.SalesPrice.focus();
+                return;
+            }
+
+            if (document.calc.InterestRate.value == "") {
+                alert("Please enter an interest rate.");
+                document.calc.InterestRate.focus();
+                return;
+            }
+
+            //calculate P & I payment-----------------------------------------------
+            var I;
+            var T;
+            var P;
+            var Result;
+            I = document.calc.InterestRate.value
+            I = (I * 0.01) / 12;
+            //T= document.calc.LenOfLoan.value;
+            T = convertMonths(document.calc.LenOfLoan.selectedIndex);
+            P = document.calc.LoanAmount.value;
+            document.calc.PI.value = PMT(I, T, P);
+            Result = formatResult(document.calc.PI);
+            //calculate PMI payment-------------------------------------------------
+            var ltv;
+            var months;
+            var factor;
+            var PMI;
+            ltv = document.calc.LoanAmount.value / document.calc.SalesPrice.value;
+            if (ltv < .80001) {
+                document.calc.PMI.value = 0;
+            } else {
+                months = convertMonths(document.calc.LenOfLoan.selectedIndex);
+                if (months > 240) {
+                    factor = selectFactorA(ltv);
+                } else {
+                    factor = selectFactorB(ltv);
+                }
+                PMI = factor * document.calc.LoanAmount.value / 12;
+                document.calc.PMI.value = PMI;
+                Result = formatResult(document.calc.PMI);
+
+            }
+            //format loan-to-value and downpayment amounts---------------------------
+            var percent, downpayment;
+            downpayment = document.calc.SalesPrice.value - document.calc.LoanAmount.value;
+            document.calc.downpayment.value = downpayment;
+            percent = (downpayment / document.calc.SalesPrice.value) * 100;
+            document.calc.percent.value = percent;
+            //calculate property tax-------------------------------------------------
+            //tax=(saleprice[/100]*taxrate)/12
+            // rates taken from=http://www.dor.state.nc.us/publications/2015-16_countytaxrates.pdf
+            // look into: http://www.propertyshark.com/mason/info/Property-Taxes/NC/Buncombe-County/
+            var tax;
+            var saleprice = document.calc.SalesPrice.value;
+            var taxrate = convertTaxes(document.calc.county.selectedIndex);
+            tax = saleprice/100*taxrate/12
+            document.calc.tax.value = tax;
+            Result = formatResult(document.calc.tax);
+            
+            //calculate homeinsurance-----------------------------------------------
+            // insurance = ()/12
+            var insurance = saleprice*0.0035/12
+            document.calc.insurance.value = insurance;
+            Result = formatResult(document.calc.insurance);
+            
+            //calculate sum of monthly payments--------------------------------------
+            // sum = PMT(I, T, P) + PMI + tax + insurance
+            var sum;
+            if(PMI > 0){
+                sum = PMT(I, T, P) + PMI + tax + insurance;
+                console.log(sum);
+            }
+            else {
+                sum = PMT(I, T, P) + tax + insurance;
+                console.log(sum);
+            }
+            console.log(sum);
+            document.calc.sum.value = sum;
+            Result = formatResult(document.calc.sum);
+            
+            // Amount needed to reach 20%--------------------------------------------
+            var need20;
+            need20 = (P-(saleprice-P))*.2;
+            document.calc.need20.value = need20;
+            Result = formatResult(document.calc.need20);
+            
+
+
+        }
+    </script>
+</head>
+
+<body topmargin="0" marginheight="0">
+    <form name="calc">
+        <font size="3" face="arial,helvetica">
+            <p class="title"><b>Home Mortgage Calculator of North Carolina</b></p>
+        </font>
+        <table align="left" width="330" cellpadding="0" border="0" cellspacing="0" valign="top">
+            <tr>
+                <td align="right"><span class="regular">Loan Amount: &nbsp;</span></td>
+                <td><input type="text" name="LoanAmount" size="10"></td>
+            </tr>
+            <tr>
+                <td align="right"><span class="regular">Sales Price: &nbsp;</span></td>
+                <td><input type="text" name="SalesPrice" size="10"></td>
+            </tr>
+            <tr>
+                <td align="right"><span class="regular">Interest Rate: &nbsp;</span></td>
+                <td><input type="text" name="InterestRate" size="5" value="4.00"><span class="bold"><b>%</b></td>
+            </tr>
+            <tr>
+               <td align="right"><span class="regular">Loan Term: &nbsp;</span></td>
+                <td>
+                    <select name="LenOfLoan">
+                     <option value=480>40&nbsp;</option>
+                     <option value=360 selected>30&nbsp;</option>
+                     <option value=300>25&nbsp;</option>
+                     <option value=240>20&nbsp;</option>
+                     <option value=180>15&nbsp;</option>
+                     <option value=120>10&nbsp;</option>
+                  </select><span class="regular">years
+               </td>
+            </tr>
+            <tr>
+                <td  align="right"><span class="regular">County: &nbsp;</span></td>
+                <td>
+                    <select name="county">
+                        <option value=0.6040>Buncombe&nbsp;</option>
+                        <option value=0.5661>Haywood&nbsp;</option>
+                        <option value=0.5136>Henderson&nbsp;</option>
+                        <option value=0.5200>Madison&nbsp;</option>
+                        <option value=0.5500>McDowell&nbsp;</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+               <td colspan="2">&nbsp;</td>
+            </tr>
+            <tr>
+               <td colspan="2" align="center">
+                  <input type="button" onClick="estimatePMI()" value="Estimate Payment Amount">
+               </td>
+            </tr>
+            <tr>
+               <td colspan="2">&nbsp;</td>
+            </tr>
+            <tr>
+               <td colspan="2">
+                   <table align="left" width="330" cellpadding="0" border="0" cellspacing="0">
+                     <tr>
+                        <td width="150" align="right"><span>Principal and Interest: &nbsp;</span></td>
+                         <td align="left">&nbsp;<input disabled type="text" size="10" name="PI"></td>
+                      </tr>
+                      <tr>
+                        <td width="150" align="right"><span>Estimated PMI: &nbsp;</span></td>
+                        <td>&nbsp;<input disabled type="text" size="10" name="PMI"></td>
+                       </tr>
+                       <tr>
+                           <td width="150" align="right"><span>Property Tax: &nbsp;</span></td>
+                           <td>&nbsp;<input disabled type="text" size="10" name="tax"></td>
+                       </tr>
+                       <tr>
+                           <td width="150" align="right"><span>Insurance (3/4%): &nbsp;</span></td>
+                           <td>&nbsp;<input disabled tye="text" size="10" name="insurance"></td>
+                       </tr>
+                       <tr>
+                           <td width="150" align="right"><span>Total sum per month: &nbsp;</span></td>
+                           <td>&nbsp;<input disabled type="text" size="10" name="sum"></td>
+                       </tr>
+                       <tr>
+                           <td colspan="2">&nbsp;</td>
+                       </tr>
+                   </table>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" colspan="2">
+                    <span class="regular">The downpayment is
+                    <input type="text" disabled name="downpayment" size="8"> representing <input disabled type="text" name="percent" size="4"> % of the sales price or value of the home.</span></center>
+                </td>
+            </tr>
+            <tr>
+                <td align="center" colspan="2"><span>Amount needed to reach 20% is 
+                    <input tepe="text" disabled name="need20" size="10"</span></td>
+            </tr>
+            <tr>
+                <td colspan="2">&nbsp;</td>
+            </tr>
+            <tr>
+                <td colspan="2" align="center"><input type="reset" value="Clear Values"></td>
+            </tr>
+            <tr>
+                <td colspan="2">&nbsp;</td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                        <P>&nbsp;</P>
+                        <span class="note">
+                            * This calculator is calibrated for owner occupied, primary residences using agency grade loan terms.  PMI calculations use standard monthly premiums for fixed rate terms. Reduced premium and financed PMI may reduce costs. ARMs with first adjustments in three years or less, second homes and investment properties will have slightly different payments.
+                            <P>&nbsp;</P>
+                        </span>
+                   
+                </td>
+            </tr>
+        </table>
+    </form>
+
+</body>
+</html>
+<!--
+sources:
+Estimate Monthly PMI*: http://www.homemortgageofnc.com/homemortgage/calculators/estimatepmi.htm
+
+-->
